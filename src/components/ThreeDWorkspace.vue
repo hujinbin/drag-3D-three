@@ -138,7 +138,190 @@ const loadFont = () => {
   })
 }
 
-// 其他方法（createElement, updateElement, deleteElement 等）保持与之前版本相同...
+// 渲染场景中的元素
+const renderElements = (elements: Element[]) => {
+  if (!scene) return
+  
+  // 清除现有的元素
+  elementMeshes.forEach((mesh) => {
+    if (scene) {
+      scene.remove(mesh)
+    }
+  })
+  elementMeshes.clear()
+  
+  numberMeshes.forEach((mesh) => {
+    if (scene) {
+      scene.remove(mesh)
+    }
+  })
+  numberMeshes.clear()
+  
+  // 渲染新元素
+  elements.forEach((element) => {
+    createElement(element)
+  })
+}
+
+// 创建元素
+const createElement = (element: Element) => {
+  if (!scene || !font) return
+  
+  let geometry: THREE.BufferGeometry
+  
+  switch (element.type) {
+    case 'cube':
+      geometry = new THREE.BoxGeometry(
+        element.size.width,
+        element.size.height,
+        element.size.depth
+      )
+      break
+    case 'sphere':
+      geometry = new THREE.SphereGeometry(element.size.radius, 32, 32)
+      break
+    case 'cylinder':
+      geometry = new THREE.CylinderGeometry(
+        element.size.radius,
+        element.size.radius,
+        element.size.height,
+        32
+      )
+      break
+    case 'pyramid':
+      geometry = new THREE.ConeGeometry(
+        element.size.radius,
+        element.size.height,
+        4
+      )
+      break
+    default:
+      return
+  }
+  
+  const material = new THREE.MeshStandardMaterial({
+    color: element.color,
+    metalness: 0.1,
+    roughness: 0.8
+  })
+  
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.position.set(element.position.x, element.position.y, element.position.z)
+  mesh.userData.elementId = element.id
+  
+  scene.add(mesh)
+  elementMeshes.set(element.id, mesh)
+  
+  // 添加编号
+  if (element.number && font) {
+    const textGeometry = new TextGeometry(element.number, {
+      font,
+      size: 2,
+      height: 0.2
+    })
+    
+    const textMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 })
+    const textMesh = new THREE.Mesh(textGeometry, textMaterial)
+    
+    textMesh.position.set(
+      element.position.x,
+      element.position.y + element.size.height / 2 + 2,
+      element.position.z
+    )
+    
+    scene.add(textMesh)
+    numberMeshes.set(element.id, textMesh)
+  }
+}
+
+// 窗口大小调整处理
+const handleWindowResize = () => {
+  if (!camera || !renderer || !workspaceContainer.value) return
+
+  camera.aspect = workspaceContainer.value.clientWidth / workspaceContainer.value.clientHeight
+  camera.updateProjectionMatrix()
+  
+  renderer.setSize(
+    workspaceContainer.value.clientWidth,
+    workspaceContainer.value.clientHeight
+  )
+}
+
+// 画布点击处理
+const handleCanvasClick = (event: MouseEvent) => {
+  if (!raycaster || !camera || !scene || !mouse) return
+
+  // 计算鼠标位置
+  const rect = (event.target as HTMLElement).getBoundingClientRect()
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+
+  // 更新射线
+  raycaster.setFromCamera(mouse, camera)
+
+  // 检测相交的对象
+  const intersects = raycaster.intersectObjects(scene.children)
+  
+  if (intersects.length > 0) {
+    const selectedObject = intersects[0].object
+    if (selectedObject.userData.elementId) {
+      emits('element-selected', selectedObject.userData.elementId)
+    }
+  }
+}
+
+// 鼠标移动处理
+const handleMouseMove = (event: MouseEvent) => {
+  if (!mouse) return
+
+  const rect = (event.target as HTMLElement).getBoundingClientRect()
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+}
+
+// 拖拽悬停处理
+const handleDragOver = (event: DragEvent) => {
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'copy'
+  }
+}
+
+// 拖拽放置处理
+const handleDrop = (event: DragEvent) => {
+  event.preventDefault()
+  
+  if (!event.dataTransfer) return
+  
+  const elementType = event.dataTransfer.getData('elementType') as ElementType
+  if (!elementType) return
+
+  const rect = (event.target as HTMLElement).getBoundingClientRect()
+  const x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+  const y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+
+  // 创建新元素
+  const newElement: Element = {
+    id: `element-${Date.now()}`,
+    name: `New ${elementType}`,
+    type: elementType,
+    position: { x: x * 25, y: y * 25, z: 0 },
+    size: { width: 5, height: 5, depth: 5, radius: 2.5 },
+    color: '#' + Math.floor(Math.random() * 16777215).toString(16),
+    number: '1'
+  }
+
+  emits('element-created', newElement)
+}
+
+// 动画循环
+const animate = () => {
+  if (!scene || !camera || !renderer || !controls) return
+
+  requestAnimationFrame(animate)
+  controls.update()
+  renderer.render(scene, camera)
+}
 
 // 生命周期钩子
 onMounted(async () => {
@@ -164,6 +347,6 @@ onUnmounted(() => {
 
 // 监听元素变化
 watch(() => props.elements, (newElements) => {
-  // 更新逻辑保持与之前版本相同...
+  renderElements(newElements)
 }, { deep: true })
 </script>
