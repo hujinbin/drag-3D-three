@@ -1,57 +1,21 @@
 <template>
-  <div class="flex h-screen overflow-hidden">
-    <!-- 左侧工具栏 -->
-    <ElementToolbar />
+  <div class="min-h-screen">
+    <nav class="bg-gray-800 text-white p-4">
+      <div class="container mx-auto flex justify-between items-center">
+        <router-link to="/" class="text-xl font-bold">3D编辑器</router-link>
+        <div class="space-x-4">
+          <router-link to="/" class="hover:text-blue-300">首页</router-link>
+          <router-link to="/editor" class="hover:text-blue-300">编辑器</router-link>
+        </div>
+      </div>
+    </nav>
     
-    <!-- 中央工作区 -->
-    <ThreeDWorkspace 
-      class="flex-1" 
-      :elements="elements"
-      @element-selected="selectElement"
-      @element-created="addElement"
-    />
-    
-    <!-- 右侧属性面板 -->
-    <ElementProperties 
-      v-if="selectedElement" 
-      :element="selectedElement" 
-      @update-element="updateElement"
-    />
+    <main>
+      <router-view />
+    </main>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive } from 'vue'
-import ElementToolbar from './components/ElementToolbar.vue'
-import ThreeDWorkspace from './components/ThreeDWorkspace.vue'
-import ElementProperties from './components/ElementProperties.vue'
-
-// 定义元素接口
-interface Element {
-  id: string
-  name: string
-  type: 'cube' | 'sphere' | 'cylinder' | 'pyramid'
-  position: { x: number; y: number; z: number }
-  size: { width: number; height: number; depth: number; radius: number }
-  color: string
-  number: string
-}
-
-const elements = ref<Element[]>([])
-const selectedElement = ref<Element | null>(null)
-
-const addElement = (element: Element) => {
-  elements.value.push(element)
-}
-
-const selectElement = (elementId: string) => {
-  selectedElement.value = elements.value.find(el => el.id === elementId) || null
-}
-
-const updateElement = (updatedElement: Element) => {
-  const index = elements.value.findIndex(el => el.id === updatedElement.id)
-  if (index !== -1) {
-    elements.value[index] = updatedElement
-  }
-}
+// App.vue 现在只作为路由容器
 </script>
