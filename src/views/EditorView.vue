@@ -21,7 +21,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive } from 'vue'
+import { ref } from 'vue'
 import ElementToolbar from '../components/ElementToolbar.vue'
 import ThreeDWorkspace from '../components/ThreeDWorkspace.vue'
 import ElementProperties from '../components/ElementProperties.vue'

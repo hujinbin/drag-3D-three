@@ -122,12 +122,12 @@ const loadFont = () => {
       const fontLoader = new FontLoader()
       fontLoader.load(
         'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',
-        (loadedFont) => {
+        (loadedFont: any) => {
           font = loadedFont
           resolve()
         },
         undefined,
-        (error) => {
+        (error: any) => {
           console.error('Error loading font:', error)
           reject(error)
         }

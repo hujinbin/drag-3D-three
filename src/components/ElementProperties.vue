@@ -143,7 +143,7 @@
 </template>
 
 <script lang="ts" setup>
-import { defineProps, defineEmits, ref, reactive, toRefs, watch } from 'vue'
+import { defineProps, defineEmits, reactive, watch } from 'vue'
 
 // 定义元素接口
 interface Element {

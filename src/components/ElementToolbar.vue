@@ -13,7 +13,6 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
 
 // 定义元素类型
 type ElementType = 'cube' | 'sphere' | 'cylinder' | 'pyramid'
