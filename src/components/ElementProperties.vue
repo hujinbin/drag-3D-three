@@ -62,7 +62,7 @@
               class="w-full px-2 py-1 text-sm border border-gray-300 rounded-md"
             >
           </div>
-          <div v-if="element.type !== 'sphere'">
+          <div v-if="element.type === 'cube' || element.type === 'cylinder' || element.type === 'pyramid'">
             <label class="block text-xs text-gray-500">高度</label>
             <input 
               type="number" 

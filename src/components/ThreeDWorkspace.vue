@@ -7,9 +7,9 @@
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
-import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { FontLoader } from 'three/addons/loaders/FontLoader.js'
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
 
 // 定义元素类型
 type ElementType = 'cube' | 'sphere' | 'cylinder' | 'pyramid'
@@ -44,7 +44,7 @@ let renderer: THREE.WebGLRenderer | null = null
 let controls: OrbitControls | null = null
 let raycaster: THREE.Raycaster | null = null
 let mouse: THREE.Vector2 | null = null
-let font: THREE.Font | null = null
+let font: any = null
 let elementMeshes = new Map<string, THREE.Mesh>()
 let numberMeshes = new Map<string, THREE.Mesh>()
 
@@ -217,7 +217,7 @@ const createElement = (element: Element) => {
     const textGeometry = new TextGeometry(element.number, {
       font,
       size: 2,
-      height: 0.2
+      // height: 0.2
     })
     
     const textMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 })
