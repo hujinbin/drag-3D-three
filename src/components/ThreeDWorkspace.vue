@@ -27,6 +27,7 @@ interface Element {
 
 const props = defineProps<{
   elements: Element[]
+  readonly?: boolean
 }>()
 
 const emits = defineEmits<{
@@ -264,7 +265,7 @@ const handleCanvasClick = (event: MouseEvent) => {
   
   if (intersects.length > 0) {
     const selectedObject = intersects[0].object
-    if (selectedObject.userData.elementId) {
+    if (selectedObject.userData.elementId && !props.readonly) {
       emits('element-selected', selectedObject.userData.elementId)
     }
   }
@@ -281,6 +282,8 @@ const handleMouseMove = (event: MouseEvent) => {
 
 // 拖拽悬停处理
 const handleDragOver = (event: DragEvent) => {
+  if (props.readonly) return
+  
   event.preventDefault()
   if (event.dataTransfer) {
     event.dataTransfer.dropEffect = 'copy'
@@ -289,6 +292,8 @@ const handleDragOver = (event: DragEvent) => {
 
 // 拖拽放置处理
 const handleDrop = (event: DragEvent) => {
+  if (props.readonly) return
+  
   event.preventDefault()
   
   if (!event.dataTransfer) return

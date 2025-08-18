@@ -20,6 +20,13 @@
           >
             编辑器
           </router-link>
+          <router-link 
+            to="/cases" 
+            class="nav-link relative px-3 py-2 font-medium" 
+            active-class="text-blue-400"
+          >
+            案例
+          </router-link>
         </div>
       </div>
     </nav>
