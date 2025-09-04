@@ -10,6 +10,10 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { FontLoader } from 'three/addons/loaders/FontLoader.js'
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
+import { STLLoader } from 'three/addons/loaders/STLLoader.js'
 
 // 定义元素类型
 type ElementType = 'cube' | 'sphere' | 'cylinder' | 'pyramid'
@@ -18,11 +22,12 @@ type ElementType = 'cube' | 'sphere' | 'cylinder' | 'pyramid'
 interface Element {
   id: string
   name: string
-  type: ElementType
+  type: ElementType | 'custom'
   position: { x: number; y: number; z: number }
   size: { width: number; height: number; depth: number; radius: number }
   color: string
   number: string
+  modelUrl?: string
 }
 
 const props = defineProps<{
@@ -168,6 +173,11 @@ const renderElements = (elements: Element[]) => {
 const createElement = (element: Element) => {
   if (!scene || !font) return
   
+  if (element.type === 'custom' && element.modelUrl) {
+    loadCustomModel(element)
+    return
+  }
+  
   let geometry: THREE.BufferGeometry
   
   switch (element.type) {
@@ -199,6 +209,102 @@ const createElement = (element: Element) => {
     default:
       return
   }
+  
+  // 加载自定义3D模型
+const loadCustomModel = (element: Element) => {
+  if (!scene || !element.modelUrl) return
+  
+  const fileExtension = element.modelUrl.split('.').pop()?.toLowerCase()
+  let loader: any
+  
+  // 根据文件扩展名选择合适的加载器
+  switch (fileExtension) {
+    case 'glb':
+    case 'gltf':
+      loader = new GLTFLoader()
+      loader.load(
+        element.modelUrl,
+        (gltf) => {
+          const model = gltf.scene
+          setupModel(model, element)
+        },
+        undefined,
+        (error) => console.error('Error loading GLTF/GLB model:', error)
+      )
+      break
+    case 'obj':
+      loader = new OBJLoader()
+      loader.load(
+        element.modelUrl,
+        (obj) => {
+          setupModel(obj, element)
+        },
+        undefined,
+        (error) => console.error('Error loading OBJ model:', error)
+      )
+      break
+    case 'fbx':
+      loader = new FBXLoader()
+      loader.load(
+        element.modelUrl,
+        (fbx) => {
+          setupModel(fbx, element)
+        },
+        undefined,
+        (error) => console.error('Error loading FBX model:', error)
+      )
+      break
+    case 'stl':
+      loader = new STLLoader()
+      loader.load(
+        element.modelUrl,
+        (geometry) => {
+          const material = new THREE.MeshStandardMaterial({ 
+            color: element.color || '#ffffff',
+            roughness: 0.7,
+            metalness: 0.2
+          })
+          const mesh = new THREE.Mesh(geometry, material)
+          setupModel(mesh, element)
+        },
+        undefined,
+        (error) => console.error('Error loading STL model:', error)
+      )
+      break
+    default:
+      console.error('Unsupported model format:', fileExtension)
+      return
+  }
+}
+
+// 设置模型的通用属性
+const setupModel = (model: THREE.Object3D, element: Element) => {
+  if (!scene) return
+  
+  // 设置模型位置
+  model.position.set(element.position.x, element.position.y, element.position.z)
+  
+  // 调整模型大小 - 使用包围盒计算合适的缩放比例
+  const box = new THREE.Box3().setFromObject(model)
+  const size = box.getSize(new THREE.Vector3())
+  
+  // 计算缩放比例，使模型适应指定的尺寸
+  const targetSize = Math.max(element.size.width, element.size.height, element.size.depth)
+  const maxDimension = Math.max(size.x, size.y, size.z)
+  const scale = targetSize / maxDimension
+  
+  model.scale.set(scale, scale, scale)
+  
+  // 为模型添加唯一标识
+  model.userData.elementId = element.id
+  
+  // 添加到场景
+  scene.add(model)
+  elementMeshes.set(element.id, model as THREE.Mesh)
+  
+  // 添加编号标签
+  createNumberLabel(element)
+}
   
   const material = new THREE.MeshStandardMaterial({
     color: element.color,
