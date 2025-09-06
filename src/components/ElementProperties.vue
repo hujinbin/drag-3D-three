@@ -149,11 +149,12 @@ import { defineProps, defineEmits, reactive, watch } from 'vue'
 interface Element {
   id: string
   name: string
-  type: 'cube' | 'sphere' | 'cylinder' | 'pyramid'
+  type: 'cube' | 'sphere' | 'cylinder' | 'pyramid' | 'custom'
   position: { x: number; y: number; z: number }
   size: { width: number; height: number; depth: number; radius: number }
   color: string
   number: string
+  modelUrl?: string
 }
 
 const props = defineProps<{

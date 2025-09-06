@@ -4,11 +4,12 @@ import { defineStore } from 'pinia'
 interface Element {
   id: string
   name: string
-  type: 'cube' | 'sphere' | 'cylinder' | 'pyramid'
+  type: 'cube' | 'sphere' | 'cylinder' | 'pyramid' | 'custom'
   position: { x: number; y: number; z: number }
   size: { width: number; height: number; depth: number; radius: number }
   color: string
   number: string
+  modelUrl?: string
 }
 
 // 定义案例接口
