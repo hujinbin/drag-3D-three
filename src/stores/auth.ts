@@ -1,7 +1,11 @@
 import { defineStore } from 'pinia'
+import { apiPost } from '../utils/request'
 
 interface AuthUser {
   username: string
+  id?: number
+  role?: number
+  apiKey?: string
 }
 
 const TOKEN_KEY = 'auth_token'
@@ -41,20 +45,21 @@ export const useAuthStore = defineStore('auth', {
     logout() {
       this.setAuth(null, null)
     },
-    async changePassword(oldPassword: string, newPassword: string) {
-      const res = await fetch('/api/changePassword', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {})
-        },
-        body: JSON.stringify({ oldPassword, newPassword })
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        throw new Error(data?.message || `修改密码失败（${res.status}）`)
-      }
+    async login(username: string, password: string) {
+      // 针对返回 { code, data: { token, userName, id, role, apiKey }, msg }
+      const data = await apiPost<{ token: string; userName: string; id?: number; role?: number; apiKey?: string }>(
+        '/api/login',
+        { username, password }
+      )
+      const token = data?.token || null
+      const user: AuthUser | null = data
+        ? { username: data.userName, id: data.id, role: data.role, apiKey: data.apiKey }
+        : { username }
+      this.setAuth(token, user)
       return data
+    },
+    async changePassword(oldPassword: string, newPassword: string) {
+      return await apiPost('/api/changePassword', { oldPassword, newPassword })
     }
   }
 })

@@ -64,35 +64,12 @@ async function onSubmit() {
   loading.value = true
 
   try {
-    const res = await fetch('/api/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        username: username.value,
-        password: password.value
-      })
-    })
-
-    // 有的接口返回非 2xx 状态但仍有 JSON，需要兼容处理
-    const data = await res.json().catch(() => ({}))
-
-    if (!res.ok) {
-      throw new Error(data?.message || `登录失败（${res.status}）`)
-    }
-
-    // 将返回的 token 或用户信息保存（假设返回 { token, user }）
-    const token: string | null = data?.token || null
-    const user = (data?.user && typeof data.user === 'object') ? data.user : { username: username.value }
-    auth.setAuth(token, user)
+    await auth.login(username.value, password.value)
 
     successMessage.value = '登录成功'
     // 可跳转到编辑器或首页
-    setTimeout(() => {
-      const redirect = (route.query.redirect as string) || '/editor'
-      router.push(redirect)
-    }, 600)
+    const redirect = (route.query.redirect as string) || '/editor'
+    router.replace(redirect)
   } catch (err: any) {
     errorMessage.value = err?.message || '登录失败，请稍后再试'
   } finally {

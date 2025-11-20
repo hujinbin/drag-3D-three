@@ -28,6 +28,7 @@
             案例
           </router-link>
           <router-link 
+            v-if="isAuthed"
             to="/settings" 
             class="nav-link relative px-3 py-2 font-medium" 
             active-class="text-blue-400"
