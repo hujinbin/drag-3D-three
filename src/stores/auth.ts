@@ -48,7 +48,7 @@ export const useAuthStore = defineStore('auth', {
     async login(username: string, password: string) {
       // 针对返回 { code, data: { token, userName, id, role, apiKey }, msg }
       const data = await apiPost<{ token: string; userName: string; id?: number; role?: number; apiKey?: string }>(
-        '/api/login',
+        '/login',
         { username, password }
       )
       const token = data?.token || null
@@ -59,7 +59,7 @@ export const useAuthStore = defineStore('auth', {
       return data
     },
     async changePassword(oldPassword: string, newPassword: string) {
-      return await apiPost('/api/changePassword', { oldPassword, newPassword })
+      return await apiPost('/changePassword', { oldPassword, newPassword })
     }
   }
 })
