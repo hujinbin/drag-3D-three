@@ -62,7 +62,7 @@
     <!-- 主要内容区域 -->
     <div class="flex flex-1 overflow-hidden">
       <!-- 左侧工具栏 (仅编辑模式) -->
-      <ElementToolbar v-if="mode === 'edit'" />
+      <ElementToolbar v-if="mode === 'edit'" class="w-64 border-r border-gray-200" />
       
       <!-- 中央工作区 -->
       <ThreeDWorkspace 
@@ -71,6 +71,7 @@
         :readonly="mode === 'view'"
         @element-selected="selectElement"
         @element-created="addElement"
+        @update-element="updateElement"
       />
       
       <!-- 右侧属性面板 (仅编辑模式) -->
@@ -79,6 +80,7 @@
         :element="selectedElement" 
         @update-element="updateElement"
         @delete-element="deleteElement"
+        class="w-80 border-l border-gray-200"
       />
     </div>
     

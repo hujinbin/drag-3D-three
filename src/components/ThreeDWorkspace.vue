@@ -113,6 +113,8 @@ const initThreeJS = async () => {
   if (canvas.value) {
     canvas.value.addEventListener('click', handleCanvasClick)
     canvas.value.addEventListener('mousemove', handleMouseMove)
+    canvas.value.addEventListener('mousedown', handleMouseDown)
+    canvas.value.addEventListener('mouseup', handleMouseUp)
     canvas.value.addEventListener('dragover', handleDragOver)
     canvas.value.addEventListener('drop', handleDrop)
   }
@@ -404,11 +406,86 @@ const handleCanvasClick = (event: MouseEvent) => {
 
 // 鼠标移动处理
 const handleMouseMove = (event: MouseEvent) => {
-  if (!mouse) return
+  if (!mouse || !camera || !raycaster) return
 
   const rect = (event.target as HTMLElement).getBoundingClientRect()
   mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
   mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+
+  // 拖拽移动选中元素
+  if (isDragging && dragPlane && draggedElementId) {
+    raycaster.setFromCamera(mouse, camera)
+    const intersectPoint = new THREE.Vector3()
+    if (raycaster.ray.intersectPlane(dragPlane, intersectPoint)) {
+      const mesh = elementMeshes.get(draggedElementId)
+      if (mesh) {
+        mesh.position.x = intersectPoint.x + dragOffset.x
+        mesh.position.y = intersectPoint.y + dragOffset.y
+        // 同步编号标签位置
+        const label = numberMeshes.get(draggedElementId)
+        if (label) {
+          label.position.set(
+            mesh.position.x,
+            mesh.position.y + 2,
+            mesh.position.z
+          )
+        }
+      }
+    }
+  }
+}
+
+// 拖拽相关变量
+let isDragging = false
+let draggedElementId: string | null = null
+let dragPlane: THREE.Plane | null = null
+let dragOffset = new THREE.Vector3()
+
+const handleMouseDown = (event: MouseEvent) => {
+  if (props.readonly || !raycaster || !camera || !scene || !mouse) return
+  const rect = (event.target as HTMLElement).getBoundingClientRect()
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+  raycaster.setFromCamera(mouse, camera)
+  const intersects = raycaster.intersectObjects(scene.children)
+  if (intersects.length > 0) {
+    const selectedObject = intersects[0].object as THREE.Object3D & { userData?: any }
+    const id = selectedObject.userData?.elementId as string | undefined
+    if (id) {
+      draggedElementId = id
+      isDragging = true
+      // 在 z=0 的平面上拖拽（XY 平面）
+      dragPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0)
+      const intersectPoint = new THREE.Vector3()
+      if (raycaster.ray.intersectPlane(dragPlane, intersectPoint)) {
+        dragOffset.set(
+          (selectedObject as any).position.x - intersectPoint.x,
+          (selectedObject as any).position.y - intersectPoint.y,
+          0
+        )
+      }
+    }
+  }
+}
+
+const handleMouseUp = () => {
+  if (!isDragging) return
+  isDragging = false
+  if (draggedElementId) {
+    const mesh = elementMeshes.get(draggedElementId)
+    if (mesh) {
+      // 发出更新事件，将位置写回到元素集合
+      const el = props.elements.find(e => e.id === draggedElementId)
+      if (el) {
+        const updated = {
+          ...el,
+          position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z }
+        }
+        emits('update-element', updated as any)
+      }
+    }
+  }
+  draggedElementId = null
 }
 
 // 拖拽悬停处理
@@ -429,7 +506,19 @@ const handleDrop = (event: DragEvent) => {
   
   if (!event.dataTransfer) return
   
-  const elementType = event.dataTransfer.getData('elementType') as ElementType
+  // 优先解析完整的元素数据
+  let droppedElement: Partial<Element> | null = null
+  const jsonStr = event.dataTransfer.getData('application/json')
+  if (jsonStr) {
+    try {
+      droppedElement = JSON.parse(jsonStr)
+    } catch (_) {
+      droppedElement = null
+    }
+  }
+  
+  // 兼容旧逻辑：仅携带元素类型
+  const elementType = (event.dataTransfer.getData('elementType') as ElementType) || (droppedElement?.type as ElementType)
   if (!elementType) return
 
   const rect = (event.target as HTMLElement).getBoundingClientRect()
@@ -438,13 +527,14 @@ const handleDrop = (event: DragEvent) => {
 
   // 创建新元素
   const newElement: Element = {
-    id: `element-${Date.now()}`,
-    name: `New ${elementType}`,
+    id: (droppedElement?.id as string) || `element-${Date.now()}`,
+    name: (droppedElement?.name as string) || `New ${elementType}`,
     type: elementType,
     position: { x: x * 25, y: y * 25, z: 0 },
-    size: { width: 5, height: 5, depth: 5, radius: 2.5 },
-    color: '#' + Math.floor(Math.random() * 16777215).toString(16),
-    number: '1'
+    size: droppedElement?.size as any || { width: 5, height: 5, depth: 5, radius: 2.5 },
+    color: (droppedElement?.color as string) || '#' + Math.floor(Math.random() * 16777215).toString(16),
+    number: (droppedElement?.number as string) || '',
+    modelUrl: (droppedElement?.modelUrl as string) || undefined
   }
 
   emits('element-created', newElement)
@@ -476,6 +566,8 @@ onUnmounted(() => {
   if (canvas.value) {
     canvas.value.removeEventListener('click', handleCanvasClick)
     canvas.value.removeEventListener('mousemove', handleMouseMove)
+    canvas.value.removeEventListener('mousedown', handleMouseDown)
+    canvas.value.removeEventListener('mouseup', handleMouseUp)
     canvas.value.removeEventListener('dragover', handleDragOver)
     canvas.value.removeEventListener('drop', handleDrop)
   }

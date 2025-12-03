@@ -104,6 +104,11 @@ const onDragStart = (event: DragEvent) => {
   }
   
   // 将元素数据存储到拖拽事件中
-  event.dataTransfer?.setData('application/json', JSON.stringify(elementData))
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'copy'
+    event.dataTransfer.setData('application/json', JSON.stringify(elementData))
+    // 兼容工作区旧逻辑：提供 elementType 字段
+    event.dataTransfer.setData('elementType', props.type)
+  }
 }
 </script>
