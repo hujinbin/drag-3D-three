@@ -17,14 +17,30 @@
         </router-link>
       </div>
       
+      <!-- 过滤切换 -->
+      <div class="mb-6 flex items-center justify-between">
+        <div class="space-x-2">
+          <button
+            @click="showMine = false"
+            :class="['px-3 py-1 rounded', !showMine ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300']"
+          >全部案例</button>
+          <button
+            v-if="auth.user"
+            @click="showMine = true"
+            :class="['px-3 py-1 rounded', showMine ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300']"
+          >我的模型</button>
+        </div>
+        <div v-if="showMine && auth.user" class="text-sm text-gray-300">当前用户：{{ auth.user.username }}</div>
+      </div>
+
       <!-- 案例列表 -->
-      <div v-if="cases.length === 0" class="text-center py-20">
-        <p class="text-xl text-gray-400">暂无案例，快来创建第一个模型吧！</p>
+      <div v-if="displayCases.length === 0" class="text-center py-20">
+        <p class="text-xl text-gray-400">{{ showMine ? '暂无我的模型，先去创建一个吧！' : '暂无案例，快来创建第一个模型吧！' }}</p>
       </div>
       
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         <div 
-          v-for="caseItem in cases" 
+          v-for="caseItem in displayCases" 
           :key="caseItem.id"
           class="bg-gray-800 bg-opacity-50 rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 backdrop-filter backdrop-blur-sm border border-gray-700"
         >
@@ -50,12 +66,20 @@
               >
                 查看
               </router-link>
+              <button 
+                v-if="auth.user && caseItem.ownerName === auth.user.username"
+                @click="deleteCaseItem(caseItem.id)"
+                class="mx-2 px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition-colors duration-200"
+              >
+                删除
+              </button>
             </div>
           </div>
           
           <div class="p-5">
             <h3 class="text-xl font-semibold mb-2">{{ caseItem.name }}</h3>
             <p class="text-gray-400 text-sm mb-4">{{ caseItem.description || '暂无描述' }}</p>
+            <p v-if="caseItem.ownerName" class="text-xs text-gray-500 mb-2">作者：{{ caseItem.ownerName }}</p>
             
             <div class="flex justify-between items-center">
               <span class="text-xs text-gray-500">创建于 {{ formatDate(caseItem.createdAt) }}</span>
@@ -76,16 +100,19 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useCasesStore } from '../stores/cases'
+import { useAuthStore } from '../stores/auth'
 
 // 使用案例存储
 const casesStore = useCasesStore()
-const cases = ref(casesStore.getAllCases())
-
-// 在组件挂载时加载案例
-onMounted(() => {
-  cases.value = casesStore.getAllCases()
+const auth = useAuthStore()
+const showMine = ref(false)
+const displayCases = computed(() => {
+  if (showMine.value && auth.user?.username) {
+    return casesStore.getCasesByOwner(auth.user.username, auth.user.id)
+  }
+  return casesStore.getAllCases()
 })
 
 // 格式化日期
@@ -104,5 +131,11 @@ const shareCase = (caseId: string) => {
       console.error('无法复制链接:', err)
       alert(`分享链接: ${shareUrl}`)
     })
+}
+
+// 删除案例（仅作者可见）
+const deleteCaseItem = (caseId: string) => {
+  if (!confirm('确定要删除该模型吗？此操作不可恢复。')) return
+  casesStore.deleteCase(caseId)
 }
 </script>

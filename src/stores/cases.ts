@@ -19,6 +19,8 @@ interface Case {
   description?: string
   elements: Element[]
   thumbnail?: string
+  ownerName?: string
+  ownerId?: number
   createdAt: number
   updatedAt: number
 }
@@ -65,11 +67,13 @@ export const useCasesStore = defineStore('cases', {
     },
     
     // 创建新案例
-    createCase(name: string = '未命名模型', elements: Element[] = []) {
+    createCase(name: string = '未命名模型', elements: Element[] = [], owner?: { ownerName?: string; ownerId?: number }) {
       const newCase: Case = {
         id: `case-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name,
         elements,
+        ownerName: owner?.ownerName,
+        ownerId: owner?.ownerId,
         createdAt: Date.now(),
         updatedAt: Date.now()
       }
@@ -78,6 +82,15 @@ export const useCasesStore = defineStore('cases', {
       this.saveToLocalStorage()
       
       return newCase
+    },
+    // 根据拥有者获取案例
+    getCasesByOwner(ownerName?: string, ownerId?: number) {
+      if (!ownerName && !ownerId) return this.cases
+      return this.cases.filter(c => {
+        const byName = ownerName ? c.ownerName === ownerName : true
+        const byId = typeof ownerId === 'number' ? c.ownerId === ownerId : true
+        return byName && byId
+      })
     },
     
     // 更新案例

@@ -69,6 +69,7 @@ import ElementToolbar from '../components/ElementToolbar.vue'
 import ThreeDWorkspace from '../components/ThreeDWorkspace.vue'
 import ElementProperties from '../components/ElementProperties.vue'
 import { useCasesStore } from '../stores/cases'
+import { useAuthStore } from '../stores/auth'
 
 // 定义元素接口
 interface Element {
@@ -84,6 +85,7 @@ interface Element {
 
 const router = useRouter()
 const casesStore = useCasesStore()
+const auth = useAuthStore()
 
 const elements = ref<Element[]>([])
 const selectedElement = ref<Element | null>(null)
@@ -119,7 +121,11 @@ const saveModel = () => {
   }
   
   // 创建新案例
-  const newCase = casesStore.createCase(modelName.value, [...elements.value])
+  const newCase = casesStore.createCase(
+    modelName.value,
+    [...elements.value],
+    { ownerName: auth.user?.username, ownerId: auth.user?.id }
+  )
   
   // 跳转到案例详情页面
   router.push(`/case/${newCase.id}/edit`)
