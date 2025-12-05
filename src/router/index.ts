@@ -11,37 +11,40 @@ const routes = [
   {
     path: '/',
     name: 'home',
-    component: HomeView
+    component: HomeView,
+    // 主页标题采用产品定位短语
+    meta: { title: '这是一个通过拖拉拽，自动生成3D、二维的大屏页面的应用' }
   },
   {
     path: '/editor',
     name: 'editor',
     component: EditorView,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, title: '编辑器' }
   },
   {
     path: '/cases',
     name: 'cases',
     component: CasesView,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, title: '案例库' }
   },
   {
     path: '/case/:id/:mode',
     name: 'case-detail',
     component: CaseDetailView,
     props: true,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, title: '案例详情' }
   },
   {
     path: '/settings',
     name: 'settings',
     component: SettingsView,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, title: '设置' }
   },
   {
     path: '/login',
     name: 'login',
-    component: LoginView
+    component: LoginView,
+    meta: { title: '登录' }
   }
 ]
 
@@ -63,6 +66,29 @@ router.beforeEach((to, _from, next) => {
     return
   }
   next()
+})
+
+// 路由跳转后更新网页标题
+import { useCasesStore } from '../stores/cases'
+router.afterEach((to) => {
+  const baseTitle = '拖屏工坊'
+  let pageTitle = baseTitle
+
+  const metaTitle = (to.meta as any)?.title as string | undefined
+  if (to.name === 'case-detail') {
+    const cases = useCasesStore()
+    try { cases.initialize() } catch {}
+    const id = String(to.params.id || '')
+    const mode = String(to.params.mode || '')
+    const caseItem = id ? cases.getCaseById(id) : null
+    const name = caseItem?.name || '未命名模型'
+    const modeText = mode === 'edit' ? '编辑' : mode === 'view' ? '查看' : '案例'
+    pageTitle = `${modeText} · ${name} - ${baseTitle}`
+  } else if (metaTitle) {
+    pageTitle = `${metaTitle} - ${baseTitle}`
+  }
+
+  document.title = pageTitle
 })
 
 export default router
