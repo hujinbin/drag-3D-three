@@ -51,16 +51,29 @@
       </div>
       
       <!-- 开始使用按钮 -->
-      <div class="text-center">
-        <router-link 
-          to="/editor" 
-          class="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-lg font-bold rounded-full hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 inline-flex items-center shadow-lg"
-        >
-          <span class="mr-2">开始创作</span>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
-          </svg>
-        </router-link>
+      <div class="text-center space-y-4">
+        <div>
+          <router-link 
+            to="/select-screen" 
+            class="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-lg font-bold rounded-full hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 inline-flex items-center shadow-lg"
+          >
+            <span class="mr-2">创建大屏</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </router-link>
+        </div>
+        <div>
+          <router-link 
+            to="/editor" 
+            class="px-6 py-3 bg-gray-700 bg-opacity-50 text-white text-base font-semibold rounded-full hover:bg-opacity-70 transform hover:scale-105 transition-all duration-300 inline-flex items-center shadow-lg border border-gray-600"
+          >
+            <span class="mr-2">进入编辑器</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </router-link>
+        </div>
       </div>
     </div>
   </div>

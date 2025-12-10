@@ -5,6 +5,9 @@ import CasesView from '../views/CasesView.vue'
 import CaseDetailView from '../views/CaseDetailView.vue'
 import LoginView from '../views/LoginView.vue'
 import SettingsView from '../views/SettingsView.vue'
+import SelectScreenType from '../views/SelectScreenType.vue'
+import ThreeDScreen from '../views/ThreeDScreen.vue'
+import EChartsScreen from '../views/EChartsScreen.vue'
 import { useAuthStore } from '../stores/auth'
 
 const routes = [
@@ -20,6 +23,24 @@ const routes = [
     name: 'editor',
     component: EditorView,
     meta: { requiresAuth: true, title: '编辑器' }
+  },
+  {
+    path: '/select-screen',
+    name: 'select-screen',
+    component: SelectScreenType,
+    meta: { requiresAuth: true, title: '选择大屏类型' }
+  },
+  {
+    path: '/3d-screen/:templateId?',
+    name: '3d-screen',
+    component: ThreeDScreen,
+    meta: { requiresAuth: true, title: '3D大屏' }
+  },
+  {
+    path: '/2d-screen/:templateId?',
+    name: '2d-screen',
+    component: EChartsScreen,
+    meta: { requiresAuth: true, title: '2D大屏' }
   },
   {
     path: '/cases',
