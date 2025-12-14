@@ -83,7 +83,7 @@
 // HomeView 组件
 </script>
 
-<style scoped>
+<style lang="less" scoped>
 .cube {
   animation: float 15s infinite ease-in-out;
 }
@@ -97,11 +97,13 @@
   }
 }
 
+// Less 示例：变量与嵌套，保持原有视觉不变
+@glow-color: rgba(59, 130, 246, 0.5);
+
 .feature-card {
   transition: all 0.3s ease;
-}
-
-.feature-card:hover {
-  box-shadow: 0 0 25px rgba(59, 130, 246, 0.5);
+  &:hover {
+    box-shadow: 0 0 25px @glow-color;
+  }
 }
 </style>
