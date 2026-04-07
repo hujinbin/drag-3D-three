@@ -113,21 +113,25 @@ const deleteElement = (elementId: string) => {
   }
 }
 
-// 保存模型为案例
-const saveModel = () => {
+// 保存模型为案例（调用后端 /screenCase/create 接口）
+const saving = ref(false)
+const saveModel = async () => {
   if (elements.value.length === 0) {
     alert('请先创建至少一个元素！')
     return
   }
-  
-  // 创建新案例
-  const newCase = casesStore.createCase(
-    modelName.value,
-    [...elements.value],
-    { ownerName: auth.user?.username, ownerId: auth.user?.id }
-  )
-  
-  // 跳转到案例详情页面
-  router.push(`/case/${newCase.id}/edit`)
+  saving.value = true
+  try {
+    const newCase = await casesStore.createCase({
+      name: modelName.value || undefined,
+      type: '3d',
+      elements: [...elements.value],
+    })
+    router.push(`/case/${newCase?._id}/edit`)
+  } catch (err: any) {
+    alert(err.message || '保存失败，请稍后重试')
+  } finally {
+    saving.value = false
+  }
 }
 </script>

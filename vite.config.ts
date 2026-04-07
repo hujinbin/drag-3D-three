@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://card.leheavengame.com',
+        target: 'https://www.leheavengame.com',
         changeOrigin: true,
         // 如果服务端需要移除前缀，可开启 rewrite：
         // rewrite: (path) => path.replace(/^\/api/, ''),

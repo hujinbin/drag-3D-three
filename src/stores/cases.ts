@@ -1,134 +1,201 @@
 import { defineStore } from 'pinia'
+import { apiGet, apiPost } from '../utils/request'
 
-// 定义元素接口
-interface Element {
+// ===== 接口类型定义（与 screenCase-api.md 文档一致） =====
+
+interface Position3D { x: number; y: number; z: number }
+interface Size3D { width: number; height: number; depth: number; radius: number }
+interface Position2D { x: number; y: number; width: number; height: number }
+
+export interface ScreenElement {
   id: string
   name: string
   type: 'cube' | 'sphere' | 'cylinder' | 'pyramid' | 'custom'
-  position: { x: number; y: number; z: number }
-  size: { width: number; height: number; depth: number; radius: number }
+  position: Position3D
+  size: Size3D
   color: string
   number: string
   modelUrl?: string
 }
 
-// 定义案例接口
-interface Case {
+export interface ScreenChart {
   id: string
-  name: string
-  description?: string
-  elements: Element[]
-  thumbnail?: string
-  ownerName?: string
-  ownerId?: number
+  type: 'bar' | 'line' | 'pie' | 'gauge' | 'map'
+  title: string
+  position: Position2D
+  data: any
+}
+
+export interface CaseMeta {
   createdAt: number
   updatedAt: number
 }
 
-// 本地存储键名
-const STORAGE_KEY = 'drag-3d-cases'
+/** 大屏案例（与后端 Schema 对齐） */
+export interface ScreenCase {
+  _id: string
+  name: string
+  description?: string
+  type: '3d' | '2d'
+  elements?: ScreenElement[]
+  charts?: ScreenChart[]
+  thumbnail?: string
+  ownerId?: string
+  ownerName?: string
+  state?: number       // 1=正常, 0=已删除
+  sort?: number
+  meta?: CaseMeta
+}
 
-// 创建案例存储
+/** 创建案例请求参数 */
+export interface CreateCaseParams {
+  name?: string
+  description?: string
+  type: '3d' | '2d'
+  elements?: ScreenElement[]
+  charts?: ScreenChart[]
+  thumbnail?: string
+}
+
+/** 更新案例请求参数 */
+export interface UpdateCaseParams {
+  id: string
+  name?: string
+  description?: string
+  elements?: ScreenElement[]
+  charts?: ScreenChart[]
+  thumbnail?: string
+}
+
+// ===== Store =====
+
 export const useCasesStore = defineStore('cases', {
   state: () => ({
-    cases: [] as Case[]
+    /** 当前页的案例列表（来自服务端） */
+    cases: [] as ScreenCase[],
+    /** 加载状态 */
+    loading: false,
+    /** 总数（用于分页） */
+    total: 0,
+    /** 当前页码 */
+    currentPage: 1,
+    /** 每页条数 */
+    pageSize: 20,
+    /** 当前筛选类型 */
+    currentType: undefined as '3d' | '2d' | undefined,
   }),
-  
+
   actions: {
-    // 初始化从本地存储加载数据
-    initialize() {
+    // ========== 1. 获取案例列表 ==========
+    async fetchCases(page = 1, type?: '3d' | '2d') {
+      this.loading = true
+      this.currentPage = page
+      this.currentType = type
+
       try {
-        const storedCases = localStorage.getItem(STORAGE_KEY)
-        if (storedCases) {
-          this.cases = JSON.parse(storedCases)
+        const params = new URLSearchParams()
+        params.set('page', String(page))
+        if (type) params.set('type', type)
+
+        const list = await apiGet<ScreenCase[]>(`/screenCase/list?${params.toString()}`)
+        this.cases = Array.isArray(list) ? list : []
+        this.total = this.cases.length
+      } catch (err: any) {
+        console.error('[cases] 获取列表失败:', err.message)
+        this.cases = []
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // ========== 2. 获取案例详情（返回完整数据） ==========
+    async fetchCaseDetail(id: string): Promise<ScreenCase | null> {
+      try {
+        return await apiGet<ScreenCase>(`/screenCase/detail?id=${id}`)
+      } catch (err: any) {
+        console.error('[cases] 获取详情失败:', err.message)
+        return null
+      }
+    },
+
+    // ========== 3. 创建大屏案例 ==========
+    async createCase(params: CreateCaseParams): Promise<ScreenCase | null> {
+      try {
+        const res = await apiPost<{ id: string; name: string }>('/screenCase/create', params)
+        // 创建成功后将新案例插入本地列表头部，避免重新拉取
+        const newItem: ScreenCase = {
+          _id: res.id || '',
+          name: params.name || '未命名大屏',
+          description: params.description,
+          type: params.type,
+          elements: params.elements || [],
+          charts: params.charts || [],
+          thumbnail: params.thumbnail,
+          meta: {
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          },
+          state: 1,
         }
-      } catch (error) {
-        console.error('Failed to load cases from localStorage:', error)
+        this.cases.unshift(newItem)
+        return newItem
+      } catch (err: any) {
+        console.error('[cases] 创建失败:', err.message)
+        throw err
       }
     },
-    
-    // 保存数据到本地存储
-    saveToLocalStorage() {
+
+    // ========== 4. 更新大屏案例 ==========
+    async updateCase(params: UpdateCaseParams): Promise<boolean> {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.cases))
-      } catch (error) {
-        console.error('Failed to save cases to localStorage:', error)
+        await apiPost('/screenCase/update', params)
+        // 本地同步更新
+        const idx = this.cases.findIndex(c => c._id === params.id)
+        if (idx !== -1) {
+          Object.assign(this.cases[idx], params, {
+            meta: {
+              ...this.cases[idx].meta,
+              updatedAt: Date.now(),
+            }
+          })
+        }
+        return true
+      } catch (err: any) {
+        console.error('[cases] 更新失败:', err.message)
+        throw err
       }
     },
-    
-    // 获取所有案例
-    getAllCases() {
+
+    // ========== 5. 删除大屏案例（软删除） ==========
+    async deleteCase(id: string): Promise<boolean> {
+      try {
+        await apiPost('/screenCase/delete', { id })
+        // 从本地列表移除
+        this.cases = this.cases.filter(c => c._id !== id)
+        return true
+      } catch (err: any) {
+        console.error('[cases] 删除失败:', err.message)
+        throw err
+      }
+    },
+
+    // ===== 兼容旧代码的 getter 方法 =====
+    getAllCases(): ScreenCase[] {
       return this.cases
     },
-    
-    // 根据ID获取案例
-    getCaseById(id: string) {
-      return this.cases.find(c => c.id === id) || null
+
+    getCaseById(id: string): ScreenCase | null {
+      return this.cases.find(c => c._id === id) || null
     },
-    
-    // 创建新案例
-    createCase(name: string = '未命名模型', elements: Element[] = [], owner?: { ownerName?: string; ownerId?: number }) {
-      const newCase: Case = {
-        id: `case-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        name,
-        elements,
-        ownerName: owner?.ownerName,
-        ownerId: owner?.ownerId,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      }
-      
-      this.cases.push(newCase)
-      this.saveToLocalStorage()
-      
-      return newCase
+
+    getCasesByOwner(_ownerName?: string, _ownerId?: string): ScreenCase[] {
+      // 服务端已按登录用户过滤，直接返回当前列表即可
+      return this.cases
     },
-    // 根据拥有者获取案例
-    getCasesByOwner(ownerName?: string, ownerId?: number) {
-      if (!ownerName && !ownerId) return this.cases
-      return this.cases.filter(c => {
-        const byName = ownerName ? c.ownerName === ownerName : true
-        const byId = typeof ownerId === 'number' ? c.ownerId === ownerId : true
-        return byName && byId
-      })
-    },
-    
-    // 更新案例
-    updateCase(updatedCase: Case) {
-      const index = this.cases.findIndex(c => c.id === updatedCase.id)
-      if (index !== -1) {
-        this.cases[index] = {
-          ...updatedCase,
-          updatedAt: Date.now()
-        }
-        this.saveToLocalStorage()
-        return true
-      }
-      return false
-    },
-    
-    // 删除案例
-    deleteCase(id: string) {
-      this.cases = this.cases.filter(c => c.id !== id)
-      this.saveToLocalStorage()
-    },
-    
-    // 生成缩略图（这里只是一个占位函数，实际实现可能需要使用canvas或其他方式生成缩略图）
-    generateThumbnail(caseId: string, thumbnailData: string) {
-      const caseToUpdate = this.cases.find(c => c.id === caseId)
-      if (caseToUpdate) {
-        caseToUpdate.thumbnail = thumbnailData
-        this.saveToLocalStorage()
-        return true
-      }
-      return false
+
+    /** 刷新当前列表 */
+    async refresh() {
+      await this.fetchCases(this.currentPage, this.currentType)
     }
   }
 })
-
-// 初始化存储
-export function initializeCasesStore() {
-  const store = useCasesStore()
-  store.initialize()
-  return store
-}

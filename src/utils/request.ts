@@ -17,7 +17,7 @@ export async function apiRequest<T = any>(path: string, options: RequestInit = {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
+    ...(token ? { token } : {})
   }
   const res = await fetch(`/api${path}`, { ...options, headers })
   const body = await parseJson(res)

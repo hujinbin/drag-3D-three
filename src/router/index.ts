@@ -89,26 +89,19 @@ router.beforeEach((to, _from, next) => {
   next()
 })
 
-// 路由跳转后更新网页标题
-import { useCasesStore } from '../stores/cases'
+// 路由跳转后更新网页标题（案例详情页需要异步获取数据，此处仅设默认标题）
 router.afterEach((to) => {
   const baseTitle = '拖屏工坊'
   let pageTitle = baseTitle
-
   const metaTitle = (to.meta as any)?.title as string | undefined
   if (to.name === 'case-detail') {
-    const cases = useCasesStore()
-    try { cases.initialize() } catch {}
-    const id = String(to.params.id || '')
     const mode = String(to.params.mode || '')
-    const caseItem = id ? cases.getCaseById(id) : null
-    const name = caseItem?.name || '未命名模型'
     const modeText = mode === 'edit' ? '编辑' : mode === 'view' ? '查看' : '案例'
-    pageTitle = `${modeText} · ${name} - ${baseTitle}`
+    pageTitle = `${modeText} - ${baseTitle}`
+    // CaseDetailView 组件内部会在数据加载完成后自行覆盖 document.title
   } else if (metaTitle) {
     pageTitle = `${metaTitle} - ${baseTitle}`
   }
-
   document.title = pageTitle
 })
 

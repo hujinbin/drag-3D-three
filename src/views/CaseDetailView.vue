@@ -19,7 +19,7 @@
           }"
           class="px-2 py-1 text-xs rounded-full"
         >
-          {{ mode === 'edit' ? '编辑模式' : '查看模式' }}
+          {{ caseData?.type === '2d' ? '2D大屏' : '3D大屏' }} · {{ mode === 'edit' ? '编辑模式' : '查看模式' }}
         </span>
       </div>
       
@@ -28,13 +28,14 @@
           <input 
             v-model="caseName" 
             class="bg-gray-700 text-white px-3 py-1 rounded border border-gray-600 focus:border-indigo-500 focus:outline-none"
-            placeholder="输入模型名称"
+            placeholder="输入名称"
           >
           <button 
             @click="saveCase" 
-            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors duration-200"
+            :disabled="saving"
+            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg transition-colors duration-200"
           >
-            保存
+            {{ saving ? '保存中...' : '保存' }}
           </button>
         </template>
         
@@ -48,7 +49,7 @@
         </template>
         
         <button 
-          @click="shareCase" 
+          @click="showShareDialog = true" 
           class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors duration-200 flex items-center"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -61,11 +62,12 @@
     
     <!-- 主要内容区域 -->
     <div class="flex flex-1 overflow-hidden">
-      <!-- 左侧工具栏 (仅编辑模式) -->
-      <ElementToolbar v-if="mode === 'edit'" class="w-64 border-r border-gray-200" />
+      <!-- 左侧工具栏 (仅编辑模式 + 3D类型) -->
+      <ElementToolbar v-if="mode === 'edit' && caseData?.type !== '2d'" class="w-64 border-r border-gray-200" />
       
       <!-- 中央工作区 -->
       <ThreeDWorkspace 
+        v-if="!caseData || caseData.type !== '2d'"
         class="flex-1" 
         :elements="elements"
         :readonly="mode === 'view'"
@@ -74,9 +76,18 @@
         @update-element="updateElement"
       />
       
-      <!-- 右侧属性面板 (仅编辑模式) -->
+      <!-- 2D 图表展示占位（后续可对接 EChartsScreen） -->
+      <div v-else class="flex-1 flex items-center justify-center bg-gray-900 text-gray-400">
+        <div class="text-center">
+          <div class="text-6xl mb-4">📊</div>
+          <p class="text-xl">2D 大屏预览</p>
+          <p class="text-sm mt-2">包含 {{ caseData.charts?.length || 0 }} 个图表组件</p>
+        </div>
+      </div>
+      
+      <!-- 右侧属性面板 (仅编辑模式 + 3D) -->
       <ElementProperties 
-        v-if="selectedElement && mode === 'edit'" 
+        v-if="selectedElement && mode === 'edit' && caseData?.type !== '2d'"
         :element="selectedElement" 
         @update-element="updateElement"
         @delete-element="deleteElement"
@@ -87,7 +98,7 @@
     <!-- 分享对话框 -->
     <div v-if="showShareDialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-lg p-6 max-w-md w-full">
-        <h3 class="text-xl font-semibold mb-4">分享此3D模型</h3>
+        <h3 class="text-xl font-semibold mb-4">分享此{{ caseData?.type === '2d' ? '2D' : '3D' }}大屏</h3>
         <p class="mb-4 text-gray-600">复制以下链接分享给他人：</p>
         
         <div class="flex mb-4">
@@ -127,7 +138,6 @@ import ThreeDWorkspace from '../components/ThreeDWorkspace.vue'
 import ElementProperties from '../components/ElementProperties.vue'
 import { useCasesStore } from '../stores/cases'
 
-// 定义元素接口
 interface Element {
   id: string
   name: string
@@ -154,62 +164,64 @@ const caseName = ref('')
 const caseData = ref<any>(null)
 const showShareDialog = ref(false)
 const shareUrlInput = ref<HTMLInputElement | null>(null)
+const saving = ref(false)
+const loading = ref(true)
 
-// 计算分享URL
 const shareUrl = computed(() => {
   if (!caseData.value) return ''
-  // 使用绝对URL，确保可以直接复制使用
-  const baseUrl = window.location.origin
-  return `${baseUrl}/case/${caseData.value.id}/view`
+  return `${window.location.origin}/case/${caseData.value._id}/view`
 })
 
-// 加载案例数据
-const loadCaseData = () => {
+/** 从服务端加载案例详情 */
+const loadCaseData = async () => {
   const caseId = props.id
-  const loadedCase = casesStore.getCaseById(caseId)
-  
+  loading.value = true
+
+  // 优先从本地 store 查找（避免重复请求）
+  let loadedCase = casesStore.getCaseById(caseId)
+  if (!loadedCase) {
+    // 本地没有，调接口获取详情
+    loadedCase = await casesStore.fetchCaseDetail(caseId)
+  }
+
   if (loadedCase) {
     caseData.value = loadedCase
     caseName.value = loadedCase.name
-    elements.value = [...loadedCase.elements]
+    // 兼容新旧数据结构：优先使用 elements，兼容旧 id 字段
+    if (loadedCase.elements && Array.isArray(loadedCase.elements)) {
+      elements.value = [...loadedCase.elements]
+    } else {
+      elements.value = []
+    }
   } else {
-    // 案例不存在，返回列表页
     router.push('/cases')
+  }
+  loading.value = false
+}
+
+const saveCase = async () => {
+  if (!caseData.value) return
+
+  saving.value = true
+  try {
+    await casesStore.updateCase({
+      id: caseData.value._id,
+      name: caseName.value,
+      elements: [...elements.value],
+    })
+    // 更新本地引用
+    caseData.value = { ...caseData.value, name: caseName.value }
+  } catch (err: any) {
+    alert(err.message || '保存失败')
+  } finally {
+    saving.value = false
   }
 }
 
-// 保存案例
-const saveCase = () => {
-  if (!caseData.value) return
-  
-  // 更新案例数据
-  const updatedCase = casesStore.updateCase({
-    ...caseData.value,
-    name: caseName.value,
-    elements: [...elements.value],
-    updatedAt: new Date().toISOString()
-  })
-  
-  caseData.value = updatedCase
-}
-
-// 切换到编辑模式
 const switchToEditMode = () => {
   router.push(`/case/${props.id}/edit`)
 }
 
-// 显示分享对话框
-const shareCase = () => {
-  showShareDialog.value = true
-  // 等待DOM更新后聚焦输入框
-  setTimeout(() => {
-    if (shareUrlInput.value) {
-      shareUrlInput.value.select()
-    }
-  }, 100)
-}
-
-// 复制分享链接
 const copyShareUrl = () => {
   if (shareUrlInput.value) {
     shareUrlInput.value.select()
@@ -218,7 +230,6 @@ const copyShareUrl = () => {
   }
 }
 
-// 元素操作函数
 const addElement = (element: Element) => {
   elements.value.push(element)
 }
@@ -241,13 +252,6 @@ const deleteElement = (elementId: string) => {
   }
 }
 
-// 监听路由变化，重新加载数据
-watch(() => route.params, () => {
-  loadCaseData()
-})
-
-// 组件挂载时加载数据
-onMounted(() => {
-  loadCaseData()
-})
+watch(() => route.params, () => { loadCaseData() })
+onMounted(() => { loadCaseData() })
 </script>

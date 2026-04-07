@@ -30,7 +30,7 @@
 
 
           <div class="flex items-center space-x-3 pl-4 border-l border-blue-700">
-            <router-link v-if="isAuthed" to="/settings" class="text-sm text-blue-200 hover:text-blue-300">{{ username }}</router-link>
+            <router-link v-if="isAuthed" to="/settings" class="text-sm text-blue-200 hover:text-blue-300">{{ nickname }}</router-link>
             <router-link v-if="!isAuthed" to="/login" class="nav-link px-3 py-2 font-medium">登录</router-link>
             <button v-if="isAuthed" @click="onLogout" class="px-3 py-1 bg-blue-700 hover:bg-blue-600 text-white rounded text-sm">退出</button>
           </div>
@@ -57,7 +57,7 @@ onMounted(() => {
 })
 
 const isAuthed = computed(() => auth.isAuthenticated)
-const username = computed(() => auth.user?.username || '未登录')
+const nickname = computed(() => auth.user?.nickname || '未登录')
 
 function onLogout() {
   auth.logout()
