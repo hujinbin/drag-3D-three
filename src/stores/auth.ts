@@ -68,12 +68,17 @@ export const useAuthStore = defineStore('auth', {
 
     /** ===== 1. 用户登录 ===== */
     async login(mobile: string, password: string) {
-      const res = await apiPost<any>('/user/login', { mobile, password })
-      // 登录响应中 token 在顶层，data 是用户对象
-      const token = res?.token || null
-      const userInfo: UserInfo | null = res?.data || null
-      this.setAuth(token, userInfo)
-      return { token, user: userInfo }
+      const token = localStorage.getItem('auth_token')
+      const headers: HeadersInit = { 'Content-Type': 'application/json', ...(token ? { token } : {}) }
+      const response = await fetch(`/api/user/login`, { method: 'POST', headers, body: JSON.stringify({ mobile, password }) })
+      const res = await response.json() as { code?: number; msg?: string; token?: string; data?: UserInfo }
+      if (res.code !== 200) {
+        throw new Error(res.msg || '登录失败')
+      }
+      const authToken = res.token || null
+      const userInfo: UserInfo | null = res.data || null
+      this.setAuth(authToken, userInfo)
+      return { token: authToken, user: userInfo }
     },
 
     /** ===== 2. 用户注册 ===== */

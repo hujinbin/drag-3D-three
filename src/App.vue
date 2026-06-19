@@ -30,7 +30,12 @@
 
 
           <div class="flex items-center space-x-3 pl-4 border-l border-blue-700">
-            <router-link v-if="isAuthed" to="/settings" class="text-sm text-blue-200 hover:text-blue-300">{{ nickname }}</router-link>
+            <router-link v-if="isAuthed" to="/settings" class="text-sm text-blue-200 hover:text-blue-300 flex items-center gap-2">
+            <svg class="w-5 h-5 rounded-full bg-blue-500 p-0.5" viewBox="0 0 24 24" fill="white">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+            {{ nickname }}
+          </router-link>
             <router-link v-if="!isAuthed" to="/login" class="nav-link px-3 py-2 font-medium">登录</router-link>
             <button v-if="isAuthed" @click="onLogout" class="px-3 py-1 bg-blue-700 hover:bg-blue-600 text-white rounded text-sm">退出</button>
           </div>

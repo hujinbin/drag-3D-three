@@ -3,7 +3,7 @@
     <div class="max-w-md mx-auto space-y-6">
       <!-- 用户信息卡片 -->
       <div class="bg-white shadow rounded-lg p-6">
-        <h1 class="text-xl font-semibold mb-4 text-gray-800">个人设置</h1>
+        <h1 class="text-xl font-semibold mb-4 text-gray-800">个人中心</h1>
 
         <!-- 头像 + 昵称 -->
         <div class="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
