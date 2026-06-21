@@ -62,6 +62,13 @@
         </div>
 
         <button
+          @click="openSaveDialog"
+          class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors flex items-center gap-1"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+          保存
+        </button>
+        <button
           @click="refreshData"
           class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors flex items-center gap-1"
         >
@@ -183,6 +190,99 @@
               类型：<span class="text-indigo-400 font-medium">{{ getChartLabel(selectedChart.type) }}</span>
             </div>
           </div>
+
+          <!-- 图表数据编辑 -->
+          <div class="border-t border-gray-700 pt-4">
+            <h4 class="text-sm font-medium text-gray-300 mb-3">图表数据</h4>
+
+            <!-- bar / line 数据编辑 -->
+            <template v-if="selectedChart.type === 'bar' || selectedChart.type === 'line'">
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs text-gray-500 mb-1">X轴标签（每行一个）</label>
+                  <textarea v-model="barLineXAxisText" rows="3"
+                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 resize-none" />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-500 mb-1">数值（每行一个，与标签对应）</label>
+                  <textarea v-model="barLineSeriesText" rows="3"
+                    class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 resize-none" />
+                </div>
+              </div>
+            </template>
+
+            <!-- pie / map 数据编辑 -->
+            <template v-else-if="selectedChart.type === 'pie' || selectedChart.type === 'map'">
+              <div class="space-y-2">
+                <div v-for="(item, index) in selectedChart.data" :key="index" class="flex items-center gap-2">
+                  <input v-model="item.name" type="text" placeholder="名称"
+                    class="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm focus:outline-none focus:border-indigo-500" />
+                  <input v-model.number="item.value" type="number" placeholder="数值"
+                    class="w-20 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm focus:outline-none focus:border-indigo-500" />
+                  <button @click="removePieMapItem(index)" class="text-red-400 hover:text-red-300 p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                  </button>
+                </div>
+                <button @click="addPieMapItem"
+                  class="w-full py-1.5 border border-dashed border-gray-600 rounded text-gray-400 hover:text-white hover:border-gray-500 text-sm transition-colors">
+                  + 添加数据项
+                </button>
+              </div>
+            </template>
+
+            <!-- gauge 数据编辑 -->
+            <template v-else-if="selectedChart.type === 'gauge'">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">当前数值</label>
+                <input v-model.number="selectedChart.data.value" type="number" min="0" max="100"
+                  class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 保存对话框 -->
+    <Transition name="fade">
+      <div v-if="saveDialogVisible" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" @click.self="saveDialogVisible = false">
+        <div class="bg-gray-800 rounded-xl shadow-2xl border border-gray-700 w-96 p-6">
+          <h3 class="text-lg font-bold text-white mb-4">保存大屏案例</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-400 mb-1">案例名称 <span class="text-red-400">*</span></label>
+              <input v-model="caseName" type="text" placeholder="请输入案例名称"
+                class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-400 mb-1">描述</label>
+              <textarea v-model="caseDescription" rows="2" placeholder="可选描述"
+                class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500 resize-none" />
+            </div>
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+              <span>共 {{ charts.length }} 个图表</span>
+              <span v-if="caseId" class="text-indigo-400">· 更新已有案例</span>
+              <span v-else class="text-green-400">· 创建新案例</span>
+            </div>
+          </div>
+          <div class="mt-5 space-y-2">
+            <p v-if="saveError" class="text-sm text-red-400">{{ saveError }}</p>
+            <p v-if="saveSuccess" class="text-sm text-green-400">{{ saveSuccess }}</p>
+            <div class="flex gap-3">
+              <button @click="onSaveCase" :disabled="saving"
+                class="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium py-2 rounded-lg transition-colors">
+                {{ saving ? '保存中...' : '确认保存' }}
+              </button>
+              <button @click="saveDialogVisible = false"
+                class="px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
+                取消
+              </button>
+            </div>
+            <button v-if="caseId" @click="goToCases"
+              class="w-full text-center text-sm text-gray-500 hover:text-gray-300 py-1 transition-colors">
+              前往案例库
+            </button>
+          </div>
         </div>
       </div>
     </Transition>
@@ -193,6 +293,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTemplatesStore } from '../stores/templates'
+import { useCasesStore } from '../stores/cases'
 import { use } from 'echarts/core'
 import { registerMap } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -221,6 +322,7 @@ const chartTypes = [
 const route = useRoute()
 const router = useRouter()
 const templatesStore = useTemplatesStore()
+const casesStore = useCasesStore()
 
 const charts = ref<Chart[]>([])
 const templateName = ref('2D 大屏')
@@ -229,6 +331,15 @@ const isEditMode = ref(false)
 const selectedChartId = ref<string | null>(null)
 const containerRef = ref<HTMLElement | null>(null)
 const showChartTypeMenu = ref(false)
+
+// 保存相关状态
+const caseId = ref<string | null>(null)
+const caseName = ref('')
+const caseDescription = ref('')
+const saveDialogVisible = ref(false)
+const saving = ref(false)
+const saveError = ref('')
+const saveSuccess = ref('')
 
 const selectedChart = computed(() => charts.value.find(c => c.id === selectedChartId.value))
 
@@ -287,6 +398,48 @@ function getDefaultChartData(type: string) {
 const deleteChart = (id: string) => {
   charts.value = charts.value.filter(c => c.id !== id)
   if (selectedChartId.value === id) selectedChartId.value = null
+}
+
+// ===== 图表数据编辑 =====
+/** bar/line 的 xAxis 文本（逗号分隔） */
+const barLineXAxisText = computed({
+  get: () => {
+    const c = selectedChart.value
+    if (!c || (c.type !== 'bar' && c.type !== 'line')) return ''
+    return (c.data.xAxis || []).join('\\n')
+  },
+  set: (val: string) => {
+    const c = selectedChart.value
+    if (!c || (c.type !== 'bar' && c.type !== 'line')) return
+    c.data.xAxis = val.split('\\n').map(s => s.trim()).filter(Boolean)
+  }
+})
+/** bar/line 的 series 数值文本（逗号分隔） */
+const barLineSeriesText = computed({
+  get: () => {
+    const c = selectedChart.value
+    if (!c || (c.type !== 'bar' && c.type !== 'line')) return ''
+    return (c.data.series || []).join('\\n')
+  },
+  set: (val: string) => {
+    const c = selectedChart.value
+    if (!c || (c.type !== 'bar' && c.type !== 'line')) return
+    c.data.series = val.split('\\n').map(s => Number(s.trim())).filter(n => !isNaN(n))
+  }
+})
+
+/** 为 pie/map 添加数据项 */
+function addPieMapItem() {
+  const c = selectedChart.value
+  if (!c || (c.type !== 'pie' && c.type !== 'map')) return
+  if (!Array.isArray(c.data)) c.data = []
+  c.data.push({ name: '新项', value: 0 })
+}
+/** 删除 pie/map 数据项 */
+function removePieMapItem(index: number) {
+  const c = selectedChart.value
+  if (!c || (c.type !== 'pie' && c.type !== 'map')) return
+  c.data.splice(index, 1)
 }
 
 const handleMouseDown = (e: MouseEvent, chart: Chart) => {
@@ -362,16 +515,22 @@ const getChartOption = (chart: Chart) => {
 
 onMounted(async () => {
   const tid = route.params.templateId as string
-  if (tid) {
+  const cid = route.query.caseId as string
+  if (cid) {
+    // 从已有案例加载
+    await loadCaseData(cid)
+  } else if (tid) {
     const tpl = templatesStore.getTemplateById('2d', tid)
-    if (tpl) { templateName.value = tpl.name
+    if (tpl) {
+      templateName.value = tpl.name
+      caseName.value = tpl.name
       if (tpl.data?.charts) {
-        const hasMap = tpl.data.charts.some((c:any) => c.type === 'map')
+        const hasMap = tpl.data.charts.some((c: any) => c.type === 'map')
         if (hasMap) {
           try { const r = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json'); const mj = await r.json(); registerMap('china', mj); mapLoaded.value = true }
-          catch(e){ console.error('Failed to load map:', e) }
+          catch (e) { console.error('Failed to load map:', e) }
         } else { mapLoaded.value = true }
-        charts.value = tpl.data.charts
+        charts.value = JSON.parse(JSON.stringify(tpl.data.charts))
       }
     }
   }
@@ -387,6 +546,88 @@ const refreshData = () => {
 }
 
 const toggleFullscreen = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()
+
+// ===== 加载和保存案例 =====
+/** 加载已有案例 */
+async function loadCaseData(id: string) {
+  try {
+    const detail = await casesStore.fetchCaseDetail(id)
+    if (detail && detail.charts) {
+      caseId.value = detail._id
+      caseName.value = detail.name || ''
+      caseDescription.value = detail.description || ''
+      templateName.value = detail.name || '2D 大屏'
+      charts.value = JSON.parse(JSON.stringify(detail.charts))
+      const hasMap = charts.value.some((c: any) => c.type === 'map')
+      if (hasMap) {
+        try { const r = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json'); const mj = await r.json(); registerMap('china', mj); mapLoaded.value = true }
+        catch(e){ console.error('Failed to load map:', e) }
+      } else { mapLoaded.value = true }
+    }
+  } catch (err: any) {
+    alert('加载案例失败：' + (err?.message || '未知错误'))
+  }
+}
+
+/** 打开保存对话框 */
+function openSaveDialog() {
+  if (!caseName.value) caseName.value = templateName.value
+  saveDialogVisible.value = true
+  saveError.value = ''
+  saveSuccess.value = ''
+}
+
+/** 保存案例 */
+async function onSaveCase() {
+  if (!caseName.value.trim()) { saveError.value = '请输入案例名称'; return }
+  if (charts.value.length === 0) { saveError.value = '请至少添加一个图表'; return }
+
+  saving.value = true
+  saveError.value = ''
+  saveSuccess.value = ''
+
+  try {
+    const payloadCharts = charts.value.map(c => ({
+      id: c.id,
+      type: c.type,
+      title: c.title,
+      position: { ...c.position },
+      data: JSON.parse(JSON.stringify(c.data))
+    }))
+
+    if (caseId.value) {
+      await casesStore.updateCase({
+        id: caseId.value,
+        name: caseName.value.trim(),
+        description: caseDescription.value.trim(),
+        charts: payloadCharts
+      })
+      saveSuccess.value = '保存成功'
+      templateName.value = caseName.value
+      setTimeout(() => { saveDialogVisible.value = false }, 1000)
+    } else {
+      const newCase = await casesStore.createCase({
+        name: caseName.value.trim(),
+        description: caseDescription.value.trim(),
+        type: '2d',
+        charts: payloadCharts
+      })
+      if (newCase) {
+        caseId.value = newCase._id
+        saveSuccess.value = '保存成功'
+        templateName.value = caseName.value
+        setTimeout(() => { saveDialogVisible.value = false }, 1000)
+      }
+    }
+  } catch (err: any) {
+    saveError.value = err?.message || '保存失败'
+  } finally {
+    saving.value = false
+  }
+}
+
+/** 前往案例库 */
+function goToCases() { router.push('/cases') }
 </script>
 
 <style scoped>

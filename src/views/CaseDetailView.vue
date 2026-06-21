@@ -187,6 +187,11 @@ const loadCaseData = async () => {
   if (loadedCase) {
     caseData.value = loadedCase
     caseName.value = loadedCase.name
+    // 2D 案例在编辑模式下跳转到 2D 大屏编辑器
+    if (loadedCase.type === '2d' && props.mode === 'edit') {
+      router.push(`/2d-screen?caseId=${loadedCase._id}`)
+      return
+    }
     // 兼容新旧数据结构：优先使用 elements，兼容旧 id 字段
     if (loadedCase.elements && Array.isArray(loadedCase.elements)) {
       elements.value = [...loadedCase.elements]
@@ -219,7 +224,11 @@ const saveCase = async () => {
 }
 
 const switchToEditMode = () => {
-  router.push(`/case/${props.id}/edit`)
+  if (caseData.value?.type === '2d') {
+    router.push(`/2d-screen?caseId=${props.id}`)
+  } else {
+    router.push(`/case/${props.id}/edit`)
+  }
 }
 
 const copyShareUrl = () => {
