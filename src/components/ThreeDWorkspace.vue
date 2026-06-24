@@ -38,6 +38,7 @@ const props = defineProps<{
 const emits = defineEmits<{
   (event: 'element-selected', elementId: string): void
   (event: 'element-created', element: Element): void
+  (event: 'update-element', element: Element): void
 }>()
 
 const workspaceContainer = ref<HTMLElement | null>(null)

@@ -1,7 +1,7 @@
 <template>
-  <div class="flex flex-col h-screen overflow-hidden">
+  <div class="flex flex-col h-screen overflow-hidden bg-gray-900">
     <!-- 顶部工具栏 -->
-    <div class="bg-gray-800 text-white px-6 py-3 flex items-center justify-between shadow-lg">
+    <div v-if="!isFullscreenView" class="bg-gray-800 text-white px-6 py-3 flex items-center justify-between shadow-lg">
       <div class="flex items-center space-x-4">
         <router-link 
           to="/cases" 
@@ -76,12 +76,34 @@
         @update-element="updateElement"
       />
       
-      <!-- 2D 图表展示占位（后续可对接 EChartsScreen） -->
-      <div v-else class="flex-1 flex items-center justify-center bg-gray-900 text-gray-400">
-        <div class="text-center">
-          <div class="text-6xl mb-4">📊</div>
-          <p class="text-xl">2D 大屏预览</p>
-          <p class="text-sm mt-2">包含 {{ caseData.charts?.length || 0 }} 个图表组件</p>
+      <!-- 2D 图表全屏预览 -->
+      <div v-else class="flex-1 relative overflow-hidden bg-gray-900">
+        <div
+          v-for="chart in charts"
+          :key="chart.id"
+          class="absolute bg-gray-800 rounded-lg shadow-xl overflow-hidden"
+          :style="getChartStyle(chart)"
+        >
+          <div class="h-full flex flex-col">
+            <div v-if="!isFullscreenView" class="px-4 py-2 bg-gray-700/90 border-b border-gray-600">
+              <h3 class="text-white font-semibold text-sm truncate">{{ chart.title }}</h3>
+            </div>
+            <div class="flex-1 min-h-0">
+              <v-chart
+                v-if="chart.type !== 'map' || mapLoaded"
+                :option="getChartOption(chart)"
+                :autoresize="true"
+                class="w-full h-full"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!loading && charts.length === 0" class="absolute inset-0 flex items-center justify-center text-gray-400">
+          <div class="text-center">
+            <div class="text-6xl mb-4">📊</div>
+            <p class="text-xl">暂无图表数据</p>
+          </div>
         </div>
       </div>
       
@@ -96,7 +118,7 @@
     </div>
     
     <!-- 分享对话框 -->
-    <div v-if="showShareDialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div v-if="showShareDialog && !isFullscreenView" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-lg p-6 max-w-md w-full">
         <h3 class="text-xl font-semibold mb-4">分享此{{ caseData?.type === '2d' ? '2D' : '3D' }}大屏</h3>
         <p class="mb-4 text-gray-600">复制以下链接分享给他人：</p>
@@ -137,6 +159,15 @@ import ElementToolbar from '../components/ElementToolbar.vue'
 import ThreeDWorkspace from '../components/ThreeDWorkspace.vue'
 import ElementProperties from '../components/ElementProperties.vue'
 import { useCasesStore } from '../stores/cases'
+import { use } from 'echarts/core'
+import { registerMap } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { BarChart, LineChart, PieChart, GaugeChart, MapChart } from 'echarts/charts'
+import { TitleComponent, TooltipComponent, LegendComponent, GridComponent, GeoComponent, VisualMapComponent } from 'echarts/components'
+import VChart from 'vue-echarts'
+
+use([CanvasRenderer, BarChart, LineChart, PieChart, GaugeChart, MapChart,
+  TitleComponent, TooltipComponent, LegendComponent, GridComponent, GeoComponent, VisualMapComponent])
 
 interface Element {
   id: string
@@ -149,6 +180,16 @@ interface Element {
   modelUrl?: string
 }
 
+type ChartType = 'bar' | 'line' | 'pie' | 'gauge' | 'map'
+
+interface Chart {
+  id: string
+  type: ChartType
+  title: string
+  position: { x: number; y: number; width: number; height: number }
+  data: any
+}
+
 const props = defineProps<{
   id: string
   mode: 'edit' | 'view'
@@ -159,6 +200,7 @@ const router = useRouter()
 const casesStore = useCasesStore()
 
 const elements = ref<Element[]>([])
+const charts = ref<Chart[]>([])
 const selectedElement = ref<Element | null>(null)
 const caseName = ref('')
 const caseData = ref<any>(null)
@@ -166,11 +208,74 @@ const showShareDialog = ref(false)
 const shareUrlInput = ref<HTMLInputElement | null>(null)
 const saving = ref(false)
 const loading = ref(true)
+const mapLoaded = ref(false)
+
+const isFullscreenView = computed(() => props.mode === 'view')
 
 const shareUrl = computed(() => {
   if (!caseData.value) return ''
   return `${window.location.origin}/case/${caseData.value._id}/view`
 })
+
+const getChartStyle = (chart: Chart) => ({
+  left: `${chart.position.x}%`,
+  top: `${chart.position.y}%`,
+  width: `${chart.position.width}%`,
+  height: `${chart.position.height}%`
+})
+
+const getChartOption = (chart: Chart) => {
+  const base = {
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(0,0,0,0.85)', borderColor: '#333', textStyle: { color: '#fff' }, axisPointer: { crossStyle: { color: '#999' } } }
+  }
+  switch (chart.type) {
+    case 'bar':
+      return { ...base, grid: { left: 55, right: 20, top: 30, bottom: 30 },
+        xAxis: { type: 'category', data: chart.data?.xAxis || chart.data?.yAxis || [], axisLine: { lineStyle:{color:'#666'}}, axisLabel:{color:'#999'} },
+        yAxis: { type: 'value', axisLine: {lineStyle:{color:'#666'}}, axisLabel:{color:'#999'}, splitLine:{lineStyle:{color:'#333'}} },
+        series: [{data: chart.data?.series || [], type: 'bar', itemStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'#3B82F6'},{offset:1,color:'#1D4ED8'}]}}}] }
+    case 'line':
+      return { ...base, grid: { left: 55, right: 20, top: 30, bottom: 30 },
+        xAxis: { type: 'category', data: chart.data?.xAxis || [], axisLine:{lineStyle:{color:'#666'}}, axisLabel:{color:'#999'} },
+        yAxis: { type: 'value', axisLine:{lineStyle:{color:'#666'}}, axisLabel:{color:'#999'}, splitLine:{lineStyle:{color:'#333'}} },
+        series: [{data: chart.data?.series || [], type: 'line', smooth:true, lineStyle:{color:'#10B981',width:3},
+          areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(16,185,129,0.3)'},{offset:1,color:'rgba(16,185,129,0.05)'}]}}}] }
+    case 'pie':
+      return { ...base, tooltip: { trigger: 'item', backgroundColor:'rgba(0,0,0,0.85)', borderColor:'#333', textStyle:{color:'#fff'} },
+        legend: { orient:'vertical', right:'8%', top:'center', textStyle:{color:'#999'}, itemWidth:12,itemHeight:12 },
+        series: [{type:'pie',radius:['38%','68%'], avoidLabelOverlap:false, itemStyle:{borderRadius:8,borderColor:'#1F2937',borderWidth:2},
+          label:{show:true, color:'#999',fontSize:11}, emphasis:{label:{show:true,fontSize:14,fontWeight:'bold'}}, data: Array.isArray(chart.data) ? chart.data : []}] }
+    case 'gauge':
+      return { ...base, series: [{type:'gauge', progress:{show:true,width:16}, axisLine:{lineStyle:{width:16,color:[[0.3,'#10B981'],[0.7,'#F59E0B'],[1,'#EF4444']]}},
+        axisTick:{show:false}, splitLine:{length:12,lineStyle:{width:2,color:'#999'}}, axisLabel:{distance:22,color:'#999',fontSize:11},
+        anchor:{show:true,showAbove:true,size:22,itemStyle:{borderWidth:8,borderColor:'#3B82F6'}}, title:{show:false},
+        detail:{valueAnimation:true,fontSize:28,offsetCenter:[0,'65%'],color:'#fff',formatter:'{value}%'}, data:[{value: chart.data?.value ?? 0}]}] }
+    case 'map':
+      return { ...base, tooltip: {trigger:'item', backgroundColor:'rgba(0,0,0,0.85)', borderColor:'#333', textStyle:{color:'#fff'} },
+        visualMap: {min:0,max:2500,text:['高','低'],realtime:false,calculable:true,inRange:{color:['#50a3ba','#eac736','#d94e5d']},textStyle:{color:'#fff'},left:'left',bottom:20},
+        geo: {map:'china',roam:true,itemStyle:{areaColor:'#323c48',borderColor:'#111'}, emphasis:{itemStyle:{areaColor:'#2a333d'},label:{show:false}}},
+        series:[{name:chart.title,type:'map',map:'china',geoIndex:0,data:Array.isArray(chart.data) ? chart.data : []}] }
+    default:
+      return base
+  }
+}
+
+async function ensureMapLoaded(nextCharts: Chart[]) {
+  const hasMap = nextCharts.some(c => c.type === 'map')
+  if (!hasMap) {
+    mapLoaded.value = true
+    return
+  }
+  try {
+    const r = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+    const mj = await r.json()
+    registerMap('china', mj)
+    mapLoaded.value = true
+  } catch (err) {
+    console.error('Failed to load map:', err)
+  }
+}
 
 /** 从服务端加载案例详情 */
 const loadCaseData = async () => {
@@ -180,8 +285,9 @@ const loadCaseData = async () => {
   // 优先从本地 store 查找（避免重复请求）
   let loadedCase = casesStore.getCaseById(caseId)
   if (!loadedCase) {
-    // 本地没有，调接口获取详情
-    loadedCase = await casesStore.fetchCaseDetail(caseId)
+    loadedCase = isFullscreenView.value
+      ? await casesStore.fetchShareCaseDetail(caseId)
+      : await casesStore.fetchCaseDetail(caseId)
   }
 
   if (loadedCase) {
@@ -198,6 +304,8 @@ const loadCaseData = async () => {
     } else {
       elements.value = []
     }
+    charts.value = Array.isArray(loadedCase.charts) ? JSON.parse(JSON.stringify(loadedCase.charts)) : []
+    await ensureMapLoaded(charts.value)
   } else {
     router.push('/cases')
   }

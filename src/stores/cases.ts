@@ -7,6 +7,21 @@ interface Position3D { x: number; y: number; z: number }
 interface Size3D { width: number; height: number; depth: number; radius: number }
 interface Position2D { x: number; y: number; width: number; height: number }
 
+export interface ChartApiConfig {
+  url: string
+  method: 'GET' | 'POST'
+  params?: Record<string, any>
+  headers?: Record<string, any>
+  body?: any
+  dataPath?: string
+}
+
+export interface ChartDataSource {
+  type: 'static' | 'api'
+  staticData?: any
+  api?: ChartApiConfig
+}
+
 export interface ScreenElement {
   id: string
   name: string
@@ -24,6 +39,7 @@ export interface ScreenChart {
   title: string
   position: Position2D
   data: any
+  dataSource?: ChartDataSource
 }
 
 export interface CaseMeta {
@@ -114,6 +130,15 @@ export const useCasesStore = defineStore('cases', {
         return await apiGet<ScreenCase>(`/screenCase/detail?id=${id}`)
       } catch (err: any) {
         console.error('[cases] 获取详情失败:', err.message)
+        return null
+      }
+    },
+
+    async fetchShareCaseDetail(id: string): Promise<ScreenCase | null> {
+      try {
+        return await apiGet<ScreenCase>(`/screenCase/shareDetail?id=${id}`)
+      } catch (err: any) {
+        console.error('[cases] 获取分享详情失败:', err.message)
         return null
       }
     },

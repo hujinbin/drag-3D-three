@@ -110,7 +110,6 @@ const successMessage = ref('')
 // 验证码相关
 const codeSvg = ref('')
 const codeLoading = ref(false)
-let _countdownTimer: ReturnType<typeof setInterval> | null = null
 const countdown = ref(0)
 
 function switchMode(m: 'login' | 'register') {

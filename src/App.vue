@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen">
-    <nav class="bg-gradient-to-r from-gray-900 to-blue-900 text-white p-4 shadow-lg sticky top-0 z-50">
+    <nav v-if="!isShareView" class="bg-gradient-to-r from-gray-900 to-blue-900 text-white p-4 shadow-lg sticky top-0 z-50">
       <div class="container mx-auto flex justify-between items-center">
         <router-link to="/" class="text-xl font-bold flex items-center">
           <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 text-2xl font-extrabold">3D编辑器</span>
@@ -51,10 +51,11 @@
 
 <script lang="ts" setup>
 import { computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 onMounted(() => {
@@ -63,6 +64,7 @@ onMounted(() => {
 
 const isAuthed = computed(() => auth.isAuthenticated)
 const nickname = computed(() => auth.user?.nickname || '未登录')
+const isShareView = computed(() => route.name === 'case-detail' && route.params.mode === 'view')
 
 function onLogout() {
   auth.logout()

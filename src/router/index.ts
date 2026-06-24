@@ -78,11 +78,12 @@ router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
   auth.initialize()
   const isAuthed = auth.isAuthenticated
+  const isShareView = to.name === 'case-detail' && to.params.mode === 'view'
   if (to.name === 'login' && isAuthed) {
     next({ name: 'editor' })
     return
   }
-  if (to.matched.some(r => (r.meta as any)?.requiresAuth) && !isAuthed) {
+  if (!isShareView && to.matched.some(r => (r.meta as any)?.requiresAuth) && !isAuthed) {
     next({ name: 'login', query: { redirect: to.fullPath } })
     return
   }

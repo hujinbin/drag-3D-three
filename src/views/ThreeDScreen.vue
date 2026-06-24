@@ -174,9 +174,6 @@ const templateName = ref('3D 大屏')
 const isEditMode = ref(false)
 const workspaceRef = ref<InstanceType<typeof ThreeDWorkspace> | null>(null)
 
-// 编辑副本，避免直接修改原数组中的对象引用
-const originalSnapshot = ref<any>(null)
-
 const selectedElement = computed(() => {
   if (!selectedElementId.value) return null
   return elements.value.find(el => el.id === selectedElementId.value)

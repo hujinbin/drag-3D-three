@@ -69,7 +69,6 @@ import ElementToolbar from '../components/ElementToolbar.vue'
 import ThreeDWorkspace from '../components/ThreeDWorkspace.vue'
 import ElementProperties from '../components/ElementProperties.vue'
 import { useCasesStore } from '../stores/cases'
-import { useAuthStore } from '../stores/auth'
 
 // 定义元素接口
 interface Element {
@@ -85,7 +84,6 @@ interface Element {
 
 const router = useRouter()
 const casesStore = useCasesStore()
-const auth = useAuthStore()
 
 const elements = ref<Element[]>([])
 const selectedElement = ref<Element | null>(null)

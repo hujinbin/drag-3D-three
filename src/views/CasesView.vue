@@ -79,10 +79,10 @@
             <!-- 操作按钮 -->
             <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
               <router-link 
-                :to="`/case/${caseItem._id}/${caseItem.type === '2d' ? 'view' : 'edit'}`" 
+                :to="`/case/${caseItem._id}/edit`" 
                 class="mx-2 px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
               >
-                {{ caseItem.type === '3d' ? '编辑' : '查看' }}
+                编辑
               </router-link>
               <router-link 
                 :to="`/case/${caseItem._id}/view`" 
